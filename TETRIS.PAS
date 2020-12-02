@@ -275,7 +275,7 @@ begin
         if fig_x + fig_w >= 10 then begin Can_move_right := false; exit; end;
         for y := 0 to 3 do
                 for x := 0 to 3 do
-                        if (figure_field[y, x] <> #0)
+                        if (figure_field[y, x] <> CH_EMPTY)
                                 and (field[fig_y + y, fig_x + x + 1] <> CH_EMPTY) then begin
                                 Can_move_right := false;
                                 exit;
