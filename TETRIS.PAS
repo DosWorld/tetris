@@ -37,7 +37,7 @@ asm
         int        $10
 end;
 
-procedure GraphMode;assembler;
+procedure Text40x25Mode;assembler;
 asm
         mov        ax, 1
         int        $10
@@ -89,20 +89,20 @@ end;
 
 function Ticks:word;assembler;
 asm
-        PUSH ES
+        PUSH DS
         XOR  AX, AX
-        MOV  ES, AX
-        MOV  AX, ES:[$46C]
-        POP  ES
+        MOV  DS, AX
+        MOV  AX, [$46C]
+        POP  DS
 end;
 
 function TicksFrom(i : word):word;assembler;
 asm
-        PUSH ES
+        PUSH DS
         XOR  AX, AX
-        MOV  ES, AX
-        MOV  AX, ES:[$46C]
-        POP  ES
+        MOV  DS, AX
+        MOV  AX, [$46C]
+        POP  DS
         MOV  BX, i
         CMP  AX, BX
         JGE  @great
@@ -134,9 +134,8 @@ CH_DOT   = '.';
 CH_EMPTY = ' ';
 CH_RB    = #$B2;
 CH_GB    = #$B1;
-
+CH_FULL  = #$DB;
 var
-        stop         : boolean;
         screen       : array [0..24, 0..39] of char;
         field        : array [0..19, 0..9] of char;
         figure_field : array[0..3, 0..3] of char;
@@ -173,13 +172,9 @@ begin
                 for y := 0 to 3 do figure_field[y, 3] := CH_EMPTY;
         end;
         fig_w := 4;
-        while (fig_w > 0) and (is_fig_col_empty(fig_w - 1)) do begin
-                fig_w := fig_w - 1;
-        end;
+        while (fig_w > 0) and (is_fig_col_empty(fig_w - 1)) do fig_w := fig_w - 1;
         fig_h := 4;
-        while (fig_h > 0) and (is_fig_line_empty(fig_h - 1)) do begin
-                fig_h := fig_h - 1;
-        end;
+        while (fig_h > 0) and (is_fig_line_empty(fig_h - 1)) do fig_h := fig_h - 1;
         if fig_w + fig_x > 10 then fig_x := 10 - fig_w;
 end;
 
@@ -187,7 +182,7 @@ procedure ReDraw;
 var figure : string[12];
     x, y   : integer;
 begin
-        fillchar(screen, 25*40, CH_EMPTY);
+        fillchar(screen, 25 * 40, CH_EMPTY);
         for y := 1 to 21 do begin
                 screen[y, 15] := CH_VL;
                 screen[y, 26] := CH_VL;
@@ -221,7 +216,7 @@ begin
         FigureCrop;
         for y := 0 to 3 do
             for x := 0 to 3 do
-                if figure_field[y, x] <> CH_EMPTY then screen[1 + fig_y + y, 16 + fig_x + x] := CH_RB;
+                if figure_field[y, x] <> CH_EMPTY then screen[1 + fig_y + y, 16 + fig_x + x] := figure_field[y, x];
         figure := figures[fig_n];
         for y := 0 to 2 do
             for x := 0 to 3 do
@@ -236,7 +231,7 @@ begin
         for y := 0 to 3 do
                 for x := 0 to 3 do
                         if (figure_field[y, x] <> CH_EMPTY)
-                                and (field[fig_y + y + 1, fig_x + x] <> CH_EMPTY) then begin
+                                and (field[fig_y + y, fig_x + x - 1] <> CH_EMPTY) then begin
                                 Can_move_left := false;
                                 exit;
                         end;
@@ -250,7 +245,7 @@ begin
         for y := 0 to 3 do
                 for x := 0 to 3 do
                         if (figure_field[y, x] <> #0)
-                                and (field[fig_y + y - 1, fig_x + x] <> CH_EMPTY) then begin
+                                and (field[fig_y + y, fig_x + x + 1] <> CH_EMPTY) then begin
                                 Can_move_right := false;
                                 exit;
                         end;
@@ -280,12 +275,17 @@ end;
 procedure Remove_Rows;
 var x, y   : integer;
     candel : boolean;
+    time   : integer;
 begin
         y := 19;
         while y > 0 do begin
                 candel := true;
                 for x := 0 to 9 do if field[y, x] = CH_EMPTY then candel := false;
                 if candel then begin
+                        Fillchar(field[y, 0], 10, CH_FULL);
+                        ReDraw;
+                        time := Ticks;
+                        while TicksFrom(time) < 6 do ;
                         move(field, field[1, 0], (y) * 10);
                         fillchar(field, 10, CH_EMPTY);
                         lines := lines + 1;
@@ -317,16 +317,15 @@ var key         : integer;
     fall        : boolean;
 begin
         fillchar(field, 20 * 10, CH_EMPTY);
-        pause := 6;
+        pause := 7;
         lines := 0;
         fig_n := random(8);
         Next_Figure;
-        stop := false;
         need_redraw := true;
         time := Ticks;
         steps := 0;
         fall := false;
-        while not stop do begin
+        while true do begin
                 if need_redraw then begin
                         ReDraw;
                         need_redraw := false;
@@ -334,7 +333,7 @@ begin
                 if HasKey then begin
                         key := GetKey;
                         key_scan := hi(key);
-                        if key_scan = 1 then stop := true
+                        if key_scan = 1 then exit
                         else if (key_scan = $4b) and Can_move_left then begin
                                 fig_x := fig_x - 1;
                                 need_redraw := true;
@@ -352,13 +351,12 @@ begin
                         end else if key_scan = $39 then begin
                                 fall := true;
                         end;
-                end;
-                if (not Can_do_step_down)
+                end else if (not Can_do_step_down)
                         or Figure_is_down then begin
                         if steps = 0 then exit;
                         Figure_Merge;
-                        Remove_Rows;
                         Next_Figure;
+                        Remove_Rows;
                         steps := 0;
                         fall := false;
                         need_redraw := true;
@@ -385,7 +383,7 @@ end;
 
 begin
         Randomize;
-        GraphMode;
+        Text40x25Mode;
         Locate(100, 100);
         Game;
         WaitKey;
