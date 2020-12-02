@@ -1,0 +1,7 @@
+all: tetris.exe cgtris.exe
+
+tetris.exe: tetris.pas
+	tpc tetris.pas
+
+cgtris.exe: cgtris.pas
+	tpc cgtris.pas
