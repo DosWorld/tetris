@@ -15,11 +15,7 @@ Here is implementation well-known brick game in Turbo Pascal 7.0.
 
 ## Screenshots
 
-Text mode:
-
-
-CGA graphics:
-
+![Image Screenshot - Txt syntax highlighjt](https://github.com/DosWorld/tetris/raw/main/CGTRIS.PNG)
 
 ## Build
 
