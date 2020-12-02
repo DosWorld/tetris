@@ -347,7 +347,7 @@ begin
                         Fillchar(field[y, 0], 10, CH_FULL);
                         ReDraw;
                         time := Ticks;
-                        while TicksFrom(time) < 6 do ;
+                        while TicksFrom(time) < 4 do ;
                         move(field, field[1, 0], (y) * 10);
                         fillchar(field, 10, CH_EMPTY);
                         lines := lines + 1;
