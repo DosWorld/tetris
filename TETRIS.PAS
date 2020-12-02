@@ -133,7 +133,7 @@ CH_RC    = #$BC;
 CH_DOT   = '.';
 CH_EMPTY = ' ';
 CH_RB    = #$B2;
-CH_GB    = #$B0;
+CH_GB    = #$B1;
 
 var
         stop         : boolean;
@@ -348,14 +348,14 @@ begin
                                 fig_a := (fig_a - 1) and 3;
                                 need_redraw := true;
                         end else if key_scan = $19 then begin
-                                GetKey;
+                                key := GetKey;
                         end else if key_scan = $39 then begin
                                 fall := true;
                         end;
                 end;
                 if (not Can_do_step_down)
                         or Figure_is_down then begin
-                        if steps = 0 then break;
+                        if steps = 0 then exit;
                         Figure_Merge;
                         Remove_Rows;
                         Next_Figure;
@@ -374,8 +374,13 @@ begin
                         steps := steps + 1;
                 end;
         end;
-        while HasKey do GetKey;
-        GetKey;
+end;
+
+procedure WaitKey;
+var key : integer;
+begin
+        while HasKey do key := GetKey;
+        key := GetKey;
 end;
 
 begin
@@ -383,5 +388,6 @@ begin
         GraphMode;
         Locate(100, 100);
         Game;
+        WaitKey;
         TextMode;
 end.
