@@ -67,6 +67,37 @@ asm
 @end:
 end;
 
+procedure sound(hz : word); Assembler;
+asm
+        mov    bx, hz
+        mov    ax, $34DD
+        mov    dx, $0012
+        cmp    dx, bx
+        jnb    @j1
+        div    bx
+        mov    bx, ax
+        IN     al, $61
+        test   al, $03
+        jnz    @j2
+        or     al, $03
+        out    $61, al
+        mov    al, $B6
+        out    $43, al
+@j2:
+        mov    al, bl
+        out    $42, al
+        mov    al, bh
+        out    $42, al
+@j1:
+end;
+
+procedure nosound; Assembler;
+asm
+        in     al, $61
+        and    al, $FC
+        out    $61, al
+end;
+
 procedure Draw(var buf);assembler;
 asm
         PUSH ES
@@ -282,6 +313,7 @@ begin
                 candel := true;
                 for x := 0 to 9 do if field[y, x] = CH_EMPTY then candel := false;
                 if candel then begin
+                        sound(100);
                         Fillchar(field[y, 0], 10, CH_FULL);
                         ReDraw;
                         time := Ticks;
@@ -290,17 +322,23 @@ begin
                         fillchar(field, 10, CH_EMPTY);
                         lines := lines + 1;
                         if (lines mod 20) = 19 then pause := pause - 1;
+                        nosound;
                 end else y := y - 1;
         end;
 end;
 
 procedure Next_Figure;
+var time : integer;
 begin
+        sound(60);
+        time := Ticks;
         fig_a := 0;
         fig_x := 4;
         fig_y := 0;
         fig_i := fig_n;
         fig_n := random(8);
+        while TicksFrom(time) < 1 do ;
+        nosound;
 end;
 
 function Figure_is_down:boolean;
