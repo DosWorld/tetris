@@ -120,28 +120,28 @@ end;
 
 function Ticks:word;assembler;
 asm
-        PUSH DS
-        XOR  AX, AX
-        MOV  DS, AX
-        MOV  AX, [$46C]
-        POP  DS
+        push ds
+        xor  ax, ax
+        mov  ds, ax
+        mov  ax, [$46C]
+        pop  ds
 end;
 
 function TicksFrom(i : word):word;assembler;
 asm
-        PUSH DS
-        XOR  AX, AX
-        MOV  DS, AX
-        MOV  AX, [$46C]
-        POP  DS
-        MOV  BX, i
-        CMP  AX, BX
-        JGE  @great
-        NEG  AX
-        ADD  AX, BX
-        JMP  @end
+        push ds
+        xor  ax, ax
+        mov  ds, ax
+        mov  ax, [$46C]
+        pop  ds
+        mov  bx, i
+        cmp  ax, bx
+        jge  @great
+        neg  ax
+        add  ax, bx
+        jmp  @end
 @great:
-        SUB AX, BX
+        sub ax, bx
 @end:
 end;
 
@@ -158,14 +158,14 @@ const
          );
 
 CH_VL    = #$BA;
-CH_HL    = #$CD;
-CH_LC    = #$C8;
-CH_RC    = #$BC;
+CH_HL    = #$C4;
+CH_LC    = #$D3;
+CH_RC    = #$BD;
 CH_DOT   = '.';
 CH_EMPTY = ' ';
 CH_RB    = #$B2;
-CH_GB    = #$B1;
-CH_FULL  = #$DB;
+CH_GB    = #$B0;
+CH_FULL  = #$B1;
 var
         screen       : array [0..24, 0..39] of char;
         field        : array [0..19, 0..9] of char;
@@ -191,40 +191,10 @@ begin
         is_fig_col_empty := true;
 end;
 
-procedure FigureCrop;
-var x, y : integer;
-begin
-        while is_fig_line_empty(0) do begin
-                for y := 1 to 3 do move(figure_field[y, 0], figure_field[y - 1, 0], 4);
-                fillchar(figure_field[3, 0], 4, CH_EMPTY);
-        end;
-        while is_fig_col_empty(0) do begin
-                for y := 0 to 3 do for x := 1 to 3 do figure_field[y, x - 1] := figure_field[y, x];
-                for y := 0 to 3 do figure_field[y, 3] := CH_EMPTY;
-        end;
-        fig_w := 4;
-        while (fig_w > 0) and (is_fig_col_empty(fig_w - 1)) do fig_w := fig_w - 1;
-        fig_h := 4;
-        while (fig_h > 0) and (is_fig_line_empty(fig_h - 1)) do fig_h := fig_h - 1;
-        if fig_w + fig_x > 10 then fig_x := 10 - fig_w;
-end;
-
-procedure ReDraw;
+procedure LoadFigure;
 var figure : string[12];
     x, y   : integer;
 begin
-        fillchar(screen, 25 * 40, CH_EMPTY);
-        for y := 1 to 21 do begin
-                screen[y, 15] := CH_VL;
-                screen[y, 26] := CH_VL;
-        end;
-        fillchar(screen[21, 15], 12, CH_HL);
-        screen[21, 15] := CH_LC;
-        screen[21, 26] := CH_RC;
-        for y := 0 to 19 do for x := 0 to 9 do begin
-                if field[y, x] = CH_EMPTY then screen[y + 1, x + 16] := CH_DOT
-                else screen[y + 1, x + 16] := field[y, x];
-        end;
         fillchar(figure_field, 16, CH_EMPTY);
         figure := figures[fig_i];
         if fig_a = 0 then begin
@@ -244,14 +214,51 @@ begin
                         if figure[1 + y * 4 + x] <> ' ' then figure_field[x, 3 - y] := CH_RB;
                 end;
         end;
-        FigureCrop;
+
+        while is_fig_line_empty(0) do begin
+                for y := 1 to 3 do move(figure_field[y, 0], figure_field[y - 1, 0], 4);
+                fillchar(figure_field[3, 0], 4, CH_EMPTY);
+        end;
+        while is_fig_col_empty(0) do begin
+                for y := 0 to 3 do move(figure_field[y, 1], figure_field[y, 0], 4);
+                for y := 0 to 3 do figure_field[y, 3] := CH_EMPTY;
+        end;
+        fig_w := 4;
+        while (fig_w > 0) and (is_fig_col_empty(fig_w - 1)) do fig_w := fig_w - 1;
+        fig_h := 4;
+        while (fig_h > 0) and (is_fig_line_empty(fig_h - 1)) do fig_h := fig_h - 1;
+        if fig_w + fig_x > 10 then fig_x := 10 - fig_w;
+end;
+
+procedure ReDraw;
+var figure : string[12];
+    x, y   : integer;
+    c      : char;
+begin
+        fillchar(screen, 25 * 40, CH_EMPTY);
+        for y := 1 to 21 do begin
+                screen[y, 15] := CH_VL;
+                screen[y, 26] := CH_VL;
+        end;
+        fillchar(screen[21, 15], 12, CH_HL);
+        screen[21, 15] := CH_LC;
+        screen[21, 26] := CH_RC;
+        for y := 0 to 19 do begin
+                fillchar(screen[y + 1, 16], 10, CH_DOT);
+                for x := 0 to 9 do begin
+                        c := field[y, x];
+                        if c <> CH_EMPTY then screen[y + 1, x + 16] := c;
+                end;
+        end;
         for y := 0 to 3 do
-            for x := 0 to 3 do
-                if figure_field[y, x] <> CH_EMPTY then screen[1 + fig_y + y, 16 + fig_x + x] := figure_field[y, x];
+                for x := 0 to 3 do begin
+                        c := figure_field[y, x];
+                        if c <> CH_EMPTY then screen[1 + fig_y + y, 16 + fig_x + x] := c;
+                end;
         figure := figures[fig_n];
         for y := 0 to 2 do
-            for x := 0 to 3 do
-                if figure[y * 4 + x + 1] <> ' ' then screen[y + 1, x + 29] := CH_GB;
+                for x := 0 to 3 do
+                        if figure[y * 4 + x + 1] <> ' ' then screen[y + 1, x + 29] := CH_GB;
         Draw(screen);
 end;
 
@@ -313,9 +320,9 @@ begin
                 candel := true;
                 for x := 0 to 9 do if field[y, x] = CH_EMPTY then candel := false;
                 if candel then begin
-                        sound(100);
                         Fillchar(field[y, 0], 10, CH_FULL);
                         ReDraw;
+                        sound(100);
                         time := Ticks;
                         while TicksFrom(time) < 4 do ;
                         move(field, field[1, 0], (y) * 10);
@@ -338,6 +345,7 @@ begin
         fig_i := fig_n;
         fig_n := random(8);
         while TicksFrom(time) < 1 do ;
+        LoadFigure;
         nosound;
 end;
 
@@ -380,9 +388,11 @@ begin
                                 need_redraw := true;
                         end else if key_scan = $48 then begin
                                 fig_a := (fig_a + 1) and 3;
+                                LoadFigure;
                                 need_redraw := true;
                         end else if key_scan = $50 then begin
                                 fig_a := (fig_a - 1) and 3;
+                                LoadFigure;
                                 need_redraw := true;
                         end else if key_scan = $19 then begin
                                 key := GetKey;
@@ -399,15 +409,19 @@ begin
                         fall := false;
                         need_redraw := true;
                 end else if fall then begin
+                        Sound(80);
                         fig_y := fig_y + 1;
                         need_redraw := true;
                         time := Ticks;
                         steps := steps + 1;
+                        Nosound;
                 end else if TicksFrom(time) > pause then begin
+                        Sound(80);
                         fig_y := fig_y + 1;
                         need_redraw := true;
                         time := Ticks;
                         steps := steps + 1;
+                        Nosound;
                 end;
         end;
 end;
