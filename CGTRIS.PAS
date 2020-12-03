@@ -206,6 +206,7 @@ var
         fig_w, fig_h : integer;
         pause        : integer;
         lines        : integer;
+        muted        : boolean;
 
 function is_fig_line_empty(line : integer):boolean;
 var x : integer;
@@ -352,14 +353,14 @@ begin
                 if candel then begin
                         Fillchar(field[y, 0], 10, CH_FULL);
                         ReDraw;
-                        sound(100);
+                        if not muted then sound(100);
                         time := Ticks;
                         while TicksFrom(time) < 4 do ;
                         move(field, field[1, 0], (y) * 10);
                         fillchar(field, 10, CH_EMPTY);
                         lines := lines + 1;
                         if (lines mod 20) = 19 then pause := pause - 1;
-                        nosound;
+                        if not muted then nosound;
                 end else y := y - 1;
         end;
 end;
@@ -367,7 +368,7 @@ end;
 procedure Next_Figure;
 var time : integer;
 begin
-        sound(60);
+        if not muted then sound(60);
         time := Ticks;
         fig_a := 0;
         fig_x := 4;
@@ -376,7 +377,7 @@ begin
         fig_n := random(8);
         while TicksFrom(time) < 1 do ;
         LoadFigure;
-        nosound;
+        if not muted then nosound;
 end;
 
 function Figure_is_down:boolean;
@@ -393,6 +394,7 @@ var key         : integer;
     fall        : boolean;
 begin
         fillchar(field, 20 * 10, CH_EMPTY);
+        muted := false;
         fig_n := random(8);
         Next_Figure;
         lines := 0;
@@ -428,6 +430,8 @@ begin
                                 key := GetKey;
                         end else if key_scan = $39 then begin
                                 fall := true;
+                        end else if key_scan = $32 then begin
+                                muted := not muted;
                         end;
                 end else if (not Can_do_step_down)
                         or Figure_is_down then begin
@@ -439,19 +443,19 @@ begin
                         fall := false;
                         need_redraw := true;
                 end else if fall then begin
-                        Sound(80);
+                        if not muted then sound(80);
                         fig_y := fig_y + 1;
                         need_redraw := true;
                         time := Ticks;
                         steps := steps + 1;
-                        Nosound;
+                        if not muted then Nosound;
                 end else if TicksFrom(time) > pause then begin
-                        Sound(80);
+                        if not muted then sound(80);
                         fig_y := fig_y + 1;
                         need_redraw := true;
                         time := Ticks;
                         steps := steps + 1;
-                        Nosound;
+                        if not muted then Nosound;
                 end;
         end;
 end;

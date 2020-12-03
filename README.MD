@@ -11,6 +11,7 @@ Here is implementation well-known brick game in Turbo Pascal 7.0.
         Left/Right Arrows - move
         Up/Down Arrows    - rotate
         P                 - Pause
+        M                 - Mute
         Esc               - exit to DOS
 
 ## Screenshots
